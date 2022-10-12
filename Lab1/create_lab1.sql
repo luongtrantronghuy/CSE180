@@ -11,10 +11,10 @@ CREATE TABLE Members (
 CREATE TABLE Rooms (
     roomID      INT,
     roomDescription CHAR(30),
-    northNext   INT,
-    eastNext    INT,
-    southNext   INT,
-    westNext    INT,
+    northNext   INT REFERENCES Rooms(roomID),
+    eastNext    INT REFERENCES Rooms(roomID),
+    southNext   INT REFERENCES Rooms(roomID),
+    westNext    INT REFERENCES Rooms(roomID),
     PRIMARY KEY (roomID)
 );
 
