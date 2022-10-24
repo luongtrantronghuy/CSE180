@@ -14,8 +14,7 @@ CREATE TABLE Members (
     joinDate DATE,
     expirationDate Date,
     isCurrent BOOLEAN,
-    UNIQUE (name),
-    UNIQUE (address)
+    UNIQUE (name, address)
 );
 
 -- Primary Key memberID could appear as a schema element, instead of next to attribute.
@@ -91,8 +90,7 @@ CREATE TABLE Monsters (
     battlePoints INT,
     roomID INT REFERENCES Rooms,
     wasDefeated BOOLEAN,
-    UNIQUE (monsterKind),
-    UNIQUE (name)
+    UNIQUE (monsterKind, name)
 );
 
 -- Primary Key role could appear as a schema element, instead of next to attribute.
