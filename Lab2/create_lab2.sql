@@ -17,8 +17,6 @@ CREATE TABLE Members (
     UNIQUE (name, address)
 );
 
--- Primary Key memberID could appear as a schema element, instead of next to attribute.
-
 -- Rooms(roomID, roomDescription, northNext, eastNext, southNext, westNext)
 CREATE TABLE Rooms(
     roomID INT PRIMARY KEY,
@@ -29,18 +27,12 @@ CREATE TABLE Rooms(
     westNext INT REFERENCES Rooms(roomID)
 );
 
--- Primary Key roomID could appear as a schema element, instead of next to attribute.
-
-
 -- Roles(role, battlePoints, InitialMoney)
 CREATE TABLE Roles (
     role VARCHAR(6) PRIMARY KEY,
     battlePoints INT,
     initialMoney NUMERIC(5,2)
 );
-
--- Primary Key role could appear as a schema element, instead of next to attribute.
-
 
 -- Characters(memberID, role, name, roomID, currentMoney, wasDefeated)
 CREATE TABLE Characters (
@@ -57,12 +49,6 @@ CREATE TABLE Characters (
     UNIQUE (name)
 );
 
--- Foreign Key specifications don't have to mention attribute names after REFERENCES when the
---   attribute names are identical in both the referencing and the referenced relations.
--- Foreign Keys involving a single attribute may be specified next to that attribute, rather than
---   as a schema element.
-
-
 -- Things(thingID, thingKind, initialRoomID, ownerMemberID, ownerRole, cost, extraBattlePoints)
 CREATE TABLE Things (
     thingID INT PRIMARY KEY,
@@ -76,12 +62,6 @@ CREATE TABLE Things (
     FOREIGN KEY (initialRoomID) REFERENCES Rooms(roomID)
 );
 
--- Foreign Key specifications don't have to mention attribute names after REFERENCES when the
---   attribute names are identical in both the referencing and the referenced relations.
--- Foreign Keys involving a single attribute may be specified next to that attribute, rather than
---   as a schema element, as in:   ownerMemberID INT REFERENCES Members(MemberID)
-
-
 -- Monsters(monsterID, monsterKind, name, battlePoints, roomID, wasDefeated)
 CREATE TABLE Monsters (
     monsterID INT PRIMARY KEY,
@@ -92,9 +72,6 @@ CREATE TABLE Monsters (
     wasDefeated BOOLEAN,
     UNIQUE (monsterKind, name)
 );
-
--- Primary Key role could appear as a schema element, instead of next to attribute.
-
 
 -- Battles(characterMemberID, characterRole, characterBattlePoints, monsterID, monsterBattlePoints)
 CREATE TABLE Battles(
@@ -107,8 +84,3 @@ CREATE TABLE Battles(
     FOREIGN KEY (characterMemberID, characterRole) REFERENCES Characters(memberID, role),
     FOREIGN KEY (monsterID) REFERENCES Monsters
 );
-
--- Foreign Key specifications don't have to mention attribute names after REFERENCES when the
---   attribute names are identical in both the referencing and the referenced relations.
--- Foreign Keys involving a single attribute may be specified next to that attribute, rather than
---   as a schema element.
