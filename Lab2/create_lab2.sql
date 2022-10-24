@@ -6,13 +6,6 @@ DROP SCHEMA Lab2 CASCADE;
 CREATE SCHEMA Lab2;
 -- ALTER ROLE htluong SET SEARCH_PATH to Lab2;
 
--- The comments that appear below are not needed in your solution.
-
--- INT is equivalent to INTEGER.
--- DECIMAL is equivalent to NUMERIC.
--- CHAR is equivalent to CHARACTER.
--- Specific spacing doesn't matter.
-
 -- Members(memberID, name, address, joinDate, expirationDate, isCurrent)  
 CREATE TABLE Members (
     memberID INT PRIMARY KEY,
@@ -20,7 +13,9 @@ CREATE TABLE Members (
     address VARCHAR(50),
     joinDate DATE,
     expirationDate Date,
-    isCurrent BOOLEAN
+    isCurrent BOOLEAN,
+    UNIQUE (name),
+    UNIQUE (address)
 );
 
 -- Primary Key memberID could appear as a schema element, instead of next to attribute.
@@ -28,7 +23,7 @@ CREATE TABLE Members (
 -- Rooms(roomID, roomDescription, northNext, eastNext, southNext, westNext)
 CREATE TABLE Rooms(
     roomID INT PRIMARY KEY,
-    roomDescription VARCHAR(30),
+    roomDescription VARCHAR(30) NOT NULL,
     northNext INT REFERENCES Rooms(roomID),
     eastNext INT REFERENCES Rooms(roomID),
     southNext INT REFERENCES Rooms(roomID),
@@ -53,13 +48,14 @@ CREATE TABLE Characters (
     memberID INT,
     role VARCHAR(6) ,
     name VARCHAR(50),
-    roomID INT,
+    roomID INT NOT NULL,
     currentMoney NUMERIC(5,2),
     wasDefeated BOOLEAN,
     PRIMARY KEY (memberID, role),
     FOREIGN KEY (memberID) REFERENCES Members,
     FOREIGN KEY (role) REFERENCES Roles,
-    FOREIGN KEY (roomID) REFERENCES Rooms
+    FOREIGN KEY (roomID) REFERENCES Rooms,
+    UNIQUE (name)
 );
 
 -- Foreign Key specifications don't have to mention attribute names after REFERENCES when the
@@ -75,7 +71,7 @@ CREATE TABLE Things (
     initialRoomID INT,
     ownerMemberID INT,
     ownerRole VARCHAR(6),
-    cost NUMERIC(4,2),
+    cost NUMERIC(4,2) NOT NULL,
     extraBattlePoints INT,
     FOREIGN KEY (ownerMemberID, ownerRole) REFERENCES Characters(memberID, role),
     FOREIGN KEY (initialRoomID) REFERENCES Rooms(roomID)
@@ -94,7 +90,9 @@ CREATE TABLE Monsters (
     name VARCHAR(50),
     battlePoints INT,
     roomID INT REFERENCES Rooms,
-    wasDefeated BOOLEAN
+    wasDefeated BOOLEAN,
+    UNIQUE (monsterKind),
+    UNIQUE (name)
 );
 
 -- Primary Key role could appear as a schema element, instead of next to attribute.
