@@ -1,9 +1,8 @@
 -- Query 1
-SELECT t.initialRoomID as roomID, r.roomDescription as initialRoomDescription, t.thingID, t.cost
+SELECT r.roomID as roomID, r.roomDescription as initialRoomDescription, t.thingID, t.cost
 FROM Rooms r, Things t
-WHERE roomID = ANY (SELECT t.initialRoomID 
-                    FROM Things 
-                    WHERE r.roomDescription = '_w%'
-                AND cost < 12
-                AND t.thingKind = 'sc'
+WHERE t.cost < 12
+    AND t.thingKind = 'sc'
+    AND r.roomID = t.initialRoomID
+    AND r.roomDescription LIKE '_w%'
 ORDER BY initialRoomDescription, cost DESC
