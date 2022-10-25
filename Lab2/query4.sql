@@ -1,5 +1,5 @@
 -- Query 4
-SELECT DISTINCT m.name as theMonster, c.name as theCharacter, b.characterRole as theRole
+SELECT m.name as theMonster, c.name as theCharacter, b.characterRole as theRole
 FROM Monsters m, Characters c, Members mem, Roles r, Battles b
 WHERE b.characterRole != 'knight'
 AND m.monsterKind = 'ba'
