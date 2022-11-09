@@ -12,4 +12,4 @@ INSERT INTO Members(memberID, name, address, joinDate, expirationDate, isCurrent
     FROM ModifyMembers mm
     WHERE mm.memberID NOT IN (SELECT memberID FROM Members);
 
-COMMIT;
+COMMIT TRANSACTION;
