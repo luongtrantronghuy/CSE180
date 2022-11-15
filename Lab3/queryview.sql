@@ -20,10 +20,10 @@ GROUP BY theMemberID, theRole, theName, theFullBattlePoints;
 */
 
 DELETE FROM Battles
-WHERE (characterMemberID, characterRole, monsterID) = (111, 'cleric', 925)
+WHERE (characterMemberID, characterRole, monsterID) = (111, 'cleric', 925);
 
 DELETE FROM Battles
-WHERE (characterMemberID, characterRole, monsterID) = (101, 'knight', 944)
+WHERE (characterMemberID, characterRole, monsterID) = (101, 'knight', 944);
 
 
 /* Output of the above query (after the DELETE queries)
