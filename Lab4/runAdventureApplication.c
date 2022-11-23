@@ -54,7 +54,40 @@ static void bad_exit(PGconn *conn)
 
 int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
 {
+    char request[MAXCONNECTIONSTRINGSIZE] = "SELECT r.roomDescription, COUNT(thingID) FROM Rooms r, Things t WHERE roomID = ";
+    char theRoomIDstr[100];
+    sprintf(theRoomIDstr, "%d", theRoomID);
+    strcat(request, theRoomIDstr);
+    strcat(request, " AND initialRoomID = ");
+    strcat(request, theRoomIDstr);
+    strcat(request, " GROUP BY r.roomDescription");
+    // printf(request, "\n");
 
+    PGresult *res = PQexec(conn, request);
+    
+    // If there's an error, exit with bad_exit
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        // printf(PQerrorMessage(conn));      
+        PQclear(res);
+        bad_exit(conn);
+        return -1;
+    }
+
+    // If no rows were returned, return with -1
+    int rows = PQntuples(res);
+    if (rows == 0) { 
+        printf("RoomID %s not found!\n", theRoomIDstr);
+        PQclear(res);
+        return -1;
+    }
+
+    // Get values from the return row (should only be one)
+    char *desc = PQgetvalue(res, 0, 0);
+    char *count = PQgetvalue(res, 0, 1);
+    printf("Room %s, %s, has %s in it.\n", theRoomIDstr, desc, count);
+    
+    PQclear(res);
+    return 0;
 }
 
 /* Function: updateWasDefeated:
@@ -68,7 +101,11 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
 
 int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 {
-
+    if(!strcmp(doCharactersOrMonsters, "M") == 0 && !strcmp(doCharactersOrMonsters, "C") == 0) {
+        printf("doCharactersOrMonsters is %s instead of M or C\n", doCharactersOrMonsters);
+        return -1;
+    }
+    return 0;
 }
 
 /* Function: increaseSomeThingCosts:
@@ -120,6 +157,9 @@ int main(int argc, char **argv)
     /* Perform the calls to printNumberOfThingsInRoom listed in Section 6 of Lab4,
      * printing error message if there's an error.
      */
+    printf("\n");
+    printNumberOfThingsInRoom(conn, 11);
+    printNumberOfThingsInRoom(conn, 1);
     
     /* Extra newline for readability */
     printf("\n");
@@ -128,6 +168,7 @@ int main(int argc, char **argv)
     /* Perform the calls to updateWasDefeated listed in Section 6 of Lab4,
      * and print messages as described.
      */
+    updateWasDefeated(conn, "A");
     
     /* Extra newline for readability */
     printf("\n");
