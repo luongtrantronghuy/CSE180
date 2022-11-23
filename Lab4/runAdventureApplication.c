@@ -67,7 +67,7 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
     
     // If there's an error, exit with bad_exit
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-        // printf(PQerrorMessage(conn));      
+        printf(PQerrorMessage(conn));      
         PQclear(res);
         bad_exit(conn);
         return -1;
@@ -101,9 +101,64 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
 
 int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 {
-    if(!strcmp(doCharactersOrMonsters, "M") == 0 && !strcmp(doCharactersOrMonsters, "C") == 0) {
-        printf("doCharactersOrMonsters is %s instead of M or C\n", doCharactersOrMonsters);
-        return -1;
+    switch(*doCharactersOrMonsters) {
+        case 'M':
+            printf("Case M\n");
+            char requestM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE monsterBattlePoints < characterBattlePoints;";
+            
+            PGresult *resM = PQexec(conn, requestM);
+            
+            if (PQresultStatus(resM) != PGRES_TUPLES_OK) {
+                printf(PQerrorMessage(conn));      
+                PQclear(resM);
+                bad_exit(conn);
+                return -1;
+            }
+            
+            int rowsM = PQntuples(resM);
+            if (rowsM == 0) { 
+                printf("Update failed. Found no losing Monsters\n");
+                PQclear(resM);
+                return -1;
+            }
+
+            for(int i = 0; i < rowsM; i++){
+                char *monsterID = PQgetvalue(resM, i, 0);
+                char updateM[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = True WHERE monsterID = ";
+                strcat(updateM, monsterID);
+                PGresult *resM = PQexec(conn, updateM);
+            }
+            PQclear(resM);
+            break;
+        case 'C':
+            printf("Case C\n");
+            char requestC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT characterMemberID FROM Battles WHERE monsterBattlePoints > characterBattlePoints;";
+            
+            PGresult *resC = PQexec(conn, requestC);
+            
+            if (PQresultStatus(resC) != PGRES_TUPLES_OK) {
+                printf(PQerrorMessage(conn));      
+                PQclear(resC);
+                bad_exit(conn);
+                return -1;
+            }
+            
+            int rowsC = PQntuples(resC);
+            if (rowsC == 0) { 
+                printf("Update failed. Found no losing Characters\n");
+                PQclear(resC);
+                return -1;
+            }
+
+            for(int i = 0; i < rowsC; i++){
+                char *monsterID = PQgetvalue(resC, i, 0);
+                printf("Found characterMemberID %s\n", monsterID);
+            }
+
+            PQclear(resC);
+            break;
+        default:
+            printf("Nada\n");
     }
     return 0;
 }
@@ -168,7 +223,8 @@ int main(int argc, char **argv)
     /* Perform the calls to updateWasDefeated listed in Section 6 of Lab4,
      * and print messages as described.
      */
-    updateWasDefeated(conn, "A");
+    updateWasDefeated(conn, "M");
+    updateWasDefeated(conn, "C");
     
     /* Extra newline for readability */
     printf("\n");
