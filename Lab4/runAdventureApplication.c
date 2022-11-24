@@ -101,66 +101,95 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
 
 int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 {
-    switch(*doCharactersOrMonsters) {
-        case 'M':
-            printf("Case M\n");
-            char requestM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE monsterBattlePoints < characterBattlePoints;";
-            
-            PGresult *resM = PQexec(conn, requestM);
-            
-            if (PQresultStatus(resM) != PGRES_TUPLES_OK) {
-                printf(PQerrorMessage(conn));      
-                PQclear(resM);
-                bad_exit(conn);
-                return -1;
-            }
-            
-            int rowsM = PQntuples(resM);
-            if (rowsM == 0) { 
-                printf("Update failed. Found no losing Monsters\n");
-                PQclear(resM);
-                return -1;
-            }
+    int isM = 0;
+    int isC = 0;
 
-            for(int i = 0; i < rowsM; i++){
-                char *monsterID = PQgetvalue(resM, i, 0);
-                char updateM[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = True WHERE monsterID = ";
-                strcat(updateM, monsterID);
-                PGresult *resM = PQexec(conn, updateM);
-            }
-            PQclear(resM);
-            break;
-        case 'C':
-            printf("Case C\n");
-            char requestC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT characterMemberID FROM Battles WHERE monsterBattlePoints > characterBattlePoints;";
-            
-            PGresult *resC = PQexec(conn, requestC);
-            
-            if (PQresultStatus(resC) != PGRES_TUPLES_OK) {
-                printf(PQerrorMessage(conn));      
-                PQclear(resC);
-                bad_exit(conn);
-                return -1;
-            }
-            
-            int rowsC = PQntuples(resC);
-            if (rowsC == 0) { 
-                printf("Update failed. Found no losing Characters\n");
-                PQclear(resC);
-                return -1;
-            }
-
-            for(int i = 0; i < rowsC; i++){
-                char *monsterID = PQgetvalue(resC, i, 0);
-                printf("Found characterMemberID %s\n", monsterID);
-            }
-
-            PQclear(resC);
-            break;
-        default:
-            printf("Nada\n");
+    if(strcmp(doCharactersOrMonsters, "M") == 0){
+        isM = 1;
+    }else if(strcmp(doCharactersOrMonsters, "C") == 0){
+        isC = 1;
+    }else{
+        printf("Not M or C\n");
+        return -1;
     }
-    return 0;
+
+    // Request for Losing Monsters
+    char requestLosingM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT b.monsterID FROM Battles b, Monsters m WHERE b.monsterBattlePoints < b.characterBattlePoints AND m.wasDefeated != True GROUP BY b.monsterID;";
+    // Request for Winning Monsters
+    char requestWinningM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT b.monsterID FROM Battles b, Monsters m WHERE b.monsterBattlePoints > b.characterBattlePoints AND m.wasDefeated != False GROUP BY b.monsterID;";
+    
+    // Request for Losing Characters
+    char requestLosingC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT b.characterMemberID FROM Battles b, Characters c WHERE b.monsterBattlePoints > b.characterBattlePoints AND c.wasDefeated != True GROUP BY b.characterMemberID;";
+    // Request for Winning Characters
+    char requestWinningC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT b.characterMemberID FROM Battles b, Characters c WHERE b.monsterBattlePoints < b.characterBattlePoints AND c.wasDefeated != False GROUP BY b.characterMemberID;";
+
+    PGresult *res1 = PQexec(conn, requestLosingM);
+    PGresult *res2 = PQexec(conn, requestWinningM);
+    
+    if(isC){
+        PGresult *res1 = PQexec(conn, requestLosingC);
+        PGresult *res2 = PQexec(conn, requestWinningC);
+    }
+    
+    // Error checking
+    if (PQresultStatus(res1) != PGRES_TUPLES_OK || PQresultStatus(res2) != PGRES_TUPLES_OK) {
+        printf(PQerrorMessage(conn));      
+        PQclear(res1);
+        PQclear(res2);
+        bad_exit(conn);
+        return -1;
+    }
+    
+    int rows1 = PQntuples(res1);
+    if (rows1 == 0) { 
+        printf("Update failed. requestLosingM returns no values\n");
+        PQclear(res1);
+        PQclear(res2);
+        bad_exit(conn);
+        return -1;
+    }
+    
+    int rows2 = PQntuples(res2);
+    if (rows2 == 0) { 
+        printf("Update failed. requestLosingC returns no values\n");
+        PQclear(res1);
+        PQclear(res2);
+        bad_exit(conn);
+        return -1;
+    }
+
+    // Start updating
+    // init as isM is 1
+    char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = False WHERE monsterID = ";
+    char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = True WHERE monsterID = ";
+    int column = 0;
+    
+    if(isC){
+        char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = False WHERE memberID = ";
+        char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = True WHERE memberID = ";
+    }
+
+    // Update Winning
+    for(int i = 0; i < rows2; i++){
+        char *ID2 = PQgetvalue(res2, i, column);
+        strcat(updateWinning, ID2);
+        PGresult *resL2 = PQexec(conn, updateWinning);
+        
+        PQclear(resL2);
+    }
+
+    // Update Losing
+    for(int i = 0; i < rows1; i++){
+        char *ID1 = PQgetvalue(res1, i, column);
+        strcat(updateLosing, ID1);
+        PGresult *resW1 = PQexec(conn, updateLosing);
+        
+        PQclear(resW1);
+    }
+
+    PQclear(res1);
+    PQclear(res2);
+    return rows1 + rows2;
 }
 
 /* Function: increaseSomeThingCosts:
@@ -223,8 +252,9 @@ int main(int argc, char **argv)
     /* Perform the calls to updateWasDefeated listed in Section 6 of Lab4,
      * and print messages as described.
      */
-    updateWasDefeated(conn, "M");
-    updateWasDefeated(conn, "C");
+    printf("Updated %d Monsters\n", updateWasDefeated(conn, "M"));
+    // printf("Updated %d Character\n", updateWasDefeated(conn, "C"));
+    updateWasDefeated(conn, "D");
     
     /* Extra newline for readability */
     printf("\n");
