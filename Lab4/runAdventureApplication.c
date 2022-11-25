@@ -186,9 +186,10 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         strcat(requestTrueW, requestW);
         strcat(requestTrueW, ")");
 
-        printf(requestTrueL);
-        printf("\n");
-        printf(requestTrueW);
+        // printf(requestTrueL);
+        // printf("\n");
+        // printf(requestTrueW);
+        // printf("\n");
         
         PGresult *resL = PQexec(conn, requestTrueL);
         PGresult *resW = PQexec(conn, requestTrueW);
