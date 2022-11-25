@@ -101,9 +101,6 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
 
 int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 {
-    int isM = 0;
-    int isC = 0;
-
     if(strcmp(doCharactersOrMonsters, "M") == 0){
         // Request monsters that lose at least 1
         char requestL[MAXCONNECTIONSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE characterBattlePoints > monsterBattlePoints GROUP BY monsterID";
@@ -178,7 +175,81 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         return numW + numL;
     
     }else if(strcmp(doCharactersOrMonsters, "C") == 0){
-        isC = 1;
+        // Request Characters that lose at least 1
+        char requestL[MAXCONNECTIONSTRINGSIZE] = "SELECT characterMemberID, characterRole FROM Battles WHERE characterBattlePoints < monsterBattlePoints GROUP BY characterMemberID, characterRole";
+        char requestTrueL[MAXCONNECTIONSTRINGSIZE] = "SELECT memberID, role from Characters WHERE wasDefeated = FALSE AND (memberID, role) IN (";
+        strcat(requestTrueL, requestL);
+        strcat(requestTrueL, ")");
+        // Request Characters that ONLY wins
+        char requestW[MAXCONNECTIONSTRINGSIZE] = "SELECT characterMemberID, characterRole FROM Battles WHERE characterBattlePoints > monsterBattlePoints AND (characterMemberID, characterRole) NOT IN (SELECT characterMemberID, characterRole FROM Battles WHERE characterBattlePoints < monsterBattlePoints GROUP BY characterMemberID, characterRole) GROUP BY characterMemberID, characterRole";
+        char requestTrueW[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT memberID, role FROM Characters WHERE wasDefeated = TRUE AND (memberID, role) IN (";
+        strcat(requestTrueW, requestW);
+        strcat(requestTrueW, ")");
+
+        printf(requestTrueL);
+        printf("\n");
+        printf(requestTrueW);
+        
+        PGresult *resL = PQexec(conn, requestTrueL);
+        PGresult *resW = PQexec(conn, requestTrueW);
+        
+        // If there's an error, exit with bad_exit
+        if (PQresultStatus(resL) != PGRES_TUPLES_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(resL);
+            bad_exit(conn);
+            return -1;
+        }
+        // If there's an error, exit with bad_exit
+        if (PQresultStatus(resW) != PGRES_TUPLES_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(resW);
+            bad_exit(conn);
+            return -1;
+        }
+        // If no rows were returned, return with -1
+        int numL = PQntuples(resL);
+        int numW = PQntuples(resW);
+
+        if (numL == 0 && numW == 0) { 
+            printf("No Characters To Update\n");
+            PQclear(resL);
+            return 0;
+        }
+
+        printf("Found %d Losing and %d Winning Characters\n", numL, numW);
+
+        char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = FALSE WHERE (memberID, role) IN (";
+        char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = TRUE WHERE (memberID, role) IN (";
+
+        // Update Winning
+        strcat(updateWinning, requestTrueW);
+        strcat(updateWinning, ")");
+
+        // Update Losing
+        strcat(updateLosing, requestTrueL);
+        strcat(updateLosing, ")");
+
+        PGresult *result = PQexec(conn, updateWinning);
+        PGresult *result1 = PQexec(conn, updateLosing);
+
+        // Error checking
+        if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(result);
+            bad_exit(conn);
+            return -1;
+        }
+        if (PQresultStatus(result1) != PGRES_COMMAND_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(result1);
+            bad_exit(conn);
+            return -1;
+        }
+
+        PQclear(result);
+        PQclear(result1);
+        return numW + numL;
     }else{
         printf("Not M or C\n");
         return -1;
@@ -247,8 +318,8 @@ int main(int argc, char **argv)
     /* Perform the calls to updateWasDefeated listed in Section 6 of Lab4,
      * and print messages as described.
      */
-    printf("Updated %d Monsters\n", updateWasDefeated(conn, "M"));
-    // printf("Updated %d Character\n", updateWasDefeated(conn, "C"));
+    // printf("Updated %d Monsters\n", updateWasDefeated(conn, "M"));
+    printf("Updated %d Character\n", updateWasDefeated(conn, "C"));
     updateWasDefeated(conn, "D");
     
     /* Extra newline for readability */
