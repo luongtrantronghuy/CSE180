@@ -105,7 +105,78 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
     int isC = 0;
 
     if(strcmp(doCharactersOrMonsters, "M") == 0){
-        isM = 1;
+        // Request monsters that lose at least 1
+        char requestL[MAXCONNECTIONSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE characterBattlePoints > monsterBattlePoints GROUP BY monsterID";
+        char requestTrueL[MAXCONNECTIONSTRINGSIZE] = "SELECT monsterID from Monsters WHERE wasDefeated = FALSE AND monsterID IN (";
+        strcat(requestTrueL, requestL);
+        strcat(requestTrueL, ")");
+        // Request monsters that ONLY wins
+        char requestW[MAXCONNECTIONSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE characterBattlePoints < monsterBattlePoints AND monsterID NOT IN (SELECT monsterID FROM Battles WHERE characterBattlePoints > monsterBattlePoints GROUP BY monsterID) GROUP BY monsterID";
+        char requestTrueW[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT monsterID FROM Monsters WHERE wasDefeated = TRUE AND monsterID IN (";
+        strcat(requestTrueW, requestW);
+        strcat(requestTrueW, ")");
+        
+        PGresult *resL = PQexec(conn, requestTrueL);
+        PGresult *resW = PQexec(conn, requestTrueW);
+        
+        // If there's an error, exit with bad_exit
+        if (PQresultStatus(resL) != PGRES_TUPLES_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(resL);
+            bad_exit(conn);
+            return -1;
+        }
+        // If there's an error, exit with bad_exit
+        if (PQresultStatus(resW) != PGRES_TUPLES_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(resW);
+            bad_exit(conn);
+            return -1;
+        }
+        // If no rows were returned, return with -1
+        int numL = PQntuples(resL);
+        int numW = PQntuples(resW);
+
+        if (numL == 0 && numW == 0) { 
+            printf("No Monsters To Update\n");
+            PQclear(resL);
+            return 0;
+        }
+
+        // printf("Found %d Losing and %d Winning Monsters\n", numL, numW);
+
+        char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = FALSE WHERE monsterID IN (";
+        char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = TRUE WHERE monsterID IN (";
+
+        // Update Winning
+        strcat(updateWinning, requestTrueW);
+        strcat(updateWinning, ")");
+
+        // Update Losing
+        strcat(updateLosing, requestTrueL);
+        strcat(updateLosing, ")");
+
+        PGresult *result = PQexec(conn, updateWinning);
+        PGresult *result1 = PQexec(conn, updateLosing);
+
+        // Error checking
+        if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(result);
+            bad_exit(conn);
+            return -1;
+        }
+        if (PQresultStatus(result1) != PGRES_COMMAND_OK) {
+            printf(PQerrorMessage(conn));      
+            PQclear(result1);
+            bad_exit(conn);
+            return -1;
+        }
+
+        PQclear(result);
+        PQclear(result1);
+        return numW + numL;
+    
     }else if(strcmp(doCharactersOrMonsters, "C") == 0){
         isC = 1;
     }else{
@@ -113,107 +184,7 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         return -1;
     }
 
-    // Request for Losing Monsters
-    char requestLosingM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE monsterBattlePoints < characterBattlePoints AND monsterID IN (SELECT monsterID FROM Monsters WHERE wasDefeated = False) GROUP BY monsterID;";
-    // Request for Winning Monsters
-    char requestWinningM[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT monsterID FROM Battles WHERE monsterBattlePoints > characterBattlePoints AND monsterID IN (SELECT monsterID FROM Monsters WHERE wasDefeated = True) AND monsterID NOT IN (SELECT monsterID FROM Battles WHERE monsterBattlePoints < characterBattlePoints GROUP BY monsterID) GROUP BY monsterID;";
     
-    // Request for Losing Characters
-    char requestLosingC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT characterMemberID, characterRole FROM Battles WHERE monsterBattlePoints > characterBattlePoints AND (characterMemberID,characterRole) IN (SELECT memberID, role FROM Characters WHERE wasDefeated = False) GROUP BY characterMemberID, characterRole;";
-    // Request for Winning Characters
-    char requestWinningC[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT characterMemberID, characterRole FROM Battles WHERE monsterBattlePoints < characterBattlePoints AND (characterMemberID,characterRole) IN (SELECT memberID, role FROM Characters WHERE wasDefeated = True) AND (characterMemberID,characterRole) NOT IN (SELECT characterMemberID, characterRole FROM Battles WHERE monsterBattlePoints > characterBattlePoints GROUP BY characterMemberID, characterRole) GROUP BY characterMemberID, characterRole;";
-
-    if(isM){
-        PGresult *res1 = PQexec(conn, requestLosingM);
-        PGresult *res2 = PQexec(conn, requestWinningM);
-
-        int rows1 = PQntuples(res1);
-        if (rows1 == 0) { 
-            printf("Update failed. res1M returns no values\n");
-            PQclear(res1);
-            PQclear(res2);
-            // bad_exit(conn);
-            return -1;
-        }
-
-        int rows2 = PQntuples(res2);
-        if (rows2 == 0) { 
-            printf("Update failed. res2M returns no values\n");
-            PQclear(res1);
-            PQclear(res2);
-            // bad_exit(conn);
-            return -1;
-        }
-        char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = False WHERE monsterID = ";
-        char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Monsters SET wasDefeated = True WHERE monsterID = ";
-        
-        // Update Winning
-        for(int i = 0; i < rows2; i++){
-            char *ID2 = PQgetvalue(res2, i, 0);
-            strcat(updateWinning, ID2);
-            PGresult *resL2 = PQexec(conn, updateWinning);
-            
-            PQclear(resL2);
-        }
-
-        // Update Losing
-        for(int i = 0; i < rows1; i++){
-            char *ID1 = PQgetvalue(res1, i, 0);
-            strcat(updateLosing, ID1);
-            PGresult *resW1 = PQexec(conn, updateLosing);
-            
-            PQclear(resW1);
-        }
-
-        PQclear(res1);
-        PQclear(res2);
-        return rows1 + rows2;
-    
-    }else if(isC){
-        PGresult *res1 = PQexec(conn, requestLosingC);
-        PGresult *res2 = PQexec(conn, requestWinningC);
-
-        int rows1 = PQntuples(res1);
-        if (rows1 == 0) { 
-            printf("Update failed. res1M returns no values\n");
-            PQclear(res1);
-            PQclear(res2);
-            // bad_exit(conn);
-            return -1;
-        }
-        int rows2 = PQntuples(res2);
-        if (rows2 == 0) { 
-            printf("Update failed. res2M returns no values\n");
-            PQclear(res1);
-            PQclear(res2);
-            // bad_exit(conn);
-            return -1;
-        }
-        char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = False WHERE memberID = ";
-        char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = True WHERE memberID = ";
-        
-        // Update Winning
-        for(int i = 0; i < rows2; i++){
-            char *ID2 = PQgetvalue(res2, i, 0);
-            strcat(updateWinning, ID2);
-            PGresult *resL2 = PQexec(conn, updateWinning);
-            
-            PQclear(resL2);
-        }
-
-        // Update Losing
-        for(int i = 0; i < rows1; i++){
-            char *ID1 = PQgetvalue(res1, i, 0);
-            strcat(updateLosing, ID1);
-            PGresult *resW1 = PQexec(conn, updateLosing);
-            
-            PQclear(resW1);
-        }
-
-        PQclear(res1);
-        PQclear(res2);
-        return rows1 + rows2;
-    }
 }
 
 /* Function: increaseSomeThingCosts:
