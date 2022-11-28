@@ -1,0 +1,76 @@
+CREATE OR REPLACE FUNCTION
+increaseSomeThingCostsFunction(maxTotalIncrease INTEGER)
+RETURNS INTEGER AS $$
+
+DECLARE
+    	costIncreased	INTEGER;	  /* Cost actually increased, the value returned */
+    	costToIncrease	    NUMERIC(4,2);      /* The cost to increase */
+        theKind     VARCHAR(2);
+        theCount    INTEGER;
+        numOfThings INTEGER;
+        currIncrease INTEGER;
+
+DECLARE increaseCursor CURSOR FOR
+    	    SELECT thingKind, COUNT(thingKind)
+            FROM Things
+            WHERE thingKind IS NOT NULL
+              AND ownerMemberID IS NOT NULL
+              AND ownerRole IS NOT NULL
+            GROUP BY thingKind
+            ORDER BY COUNT(thingKind) DESC;
+
+BEGIN
+
+	-- Input Validation
+	IF maxTotalIncrease <= 0 THEN
+	    RETURN -1;		/* Illegal value of maxTotalIncrease */
+	    END IF;
+
+        costIncreased := 0;
+        costToIncrease := 0;
+        currIncrease := maxTotalIncrease;
+
+        OPEN increaseCursor;
+
+        LOOP
+ 
+            FETCH increaseCursor INTO theKind, theCount;
+
+            EXIT WHEN NOT FOUND OR currIncrease <= 1 OR theCount < 3;
+
+            IF theCount >= 5 THEN costToIncrease := 5;
+            ELSIF theCount = 4 THEN costToIncrease := 4;
+            ELSIF theCount = 3 THEN costToIncrease := 2;
+            ELSE costToIncrease := 0;
+            END IF;
+
+            numOfThings := currIncrease / costToIncrease;
+            IF numOfThings > theCount THEN numOfThings := theCount;
+            ELSE numOfThings = numOfThings;
+            END IF;
+
+            currIncrease := currIncrease - (numOfThings * costToIncrease);
+
+            RAISE NOTICE 'theCount is %, numOfThings is %, increased %, currIncrease is %', theCount, numOfThings, (numOfThings * costToIncrease), currIncrease;
+
+            UPDATE Things
+            SET cost = cost + costToIncrease
+            WHERE thingKind = theKind
+            AND ownerMemberID IS NOT NULL
+            AND ownerRole IS NOT NULL 
+            AND thingID IN
+                (SELECT thingID FROM Things
+                 WHERE thingKind = theKind
+                 LIMIT numOfThings);
+
+            costIncreased = costIncreased + (costToIncrease * numOfThings);
+            RAISE NOTICE 'Cost increased is %', costIncreased;
+
+        END LOOP;
+        CLOSE increaseCursor;
+
+	RETURN costIncreased;
+
+    END
+
+$$ LANGUAGE plpgsql;
