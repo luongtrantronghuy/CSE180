@@ -67,16 +67,15 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
     
     // If there's an error, exit with bad_exit
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-        printf(PQerrorMessage(conn));      
+        // printf(PQerrorMessage(conn));      
         PQclear(res);
-        bad_exit(conn);
         return -1;
     }
 
     // If no rows were returned, return with -1
     int rows = PQntuples(res);
     if (rows == 0) { 
-        printf("RoomID %s not found!\n", theRoomIDstr);
+        // printf("RoomID %s not found!\n", theRoomIDstr);
         PQclear(res);
         return -1;
     }
@@ -84,7 +83,7 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
     // Get values from the return row (should only be one)
     char *desc = PQgetvalue(res, 0, 0);
     char *count = PQgetvalue(res, 0, 1);
-    printf("Room %s, %s, has %s in it.\n", theRoomIDstr, desc, count);
+    // printf("Room %s, %s, has %s in it.\n", theRoomIDstr, desc, count);
     
     PQclear(res);
     return 0;
@@ -116,18 +115,15 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         PGresult *resL = PQexec(conn, requestTrueL);
         PGresult *resW = PQexec(conn, requestTrueW);
         
-        // If there's an error, exit with bad_exit
         if (PQresultStatus(resL) != PGRES_TUPLES_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(resL);
-            bad_exit(conn);
             return -1;
         }
-        // If there's an error, exit with bad_exit
+
         if (PQresultStatus(resW) != PGRES_TUPLES_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(resW);
-            bad_exit(conn);
             return -1;
         }
         // If no rows were returned, return with -1
@@ -135,7 +131,7 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         int numW = PQntuples(resW);
 
         if (numL == 0 && numW == 0) { 
-            printf("No Monsters To Update\n");
+            // printf("No Monsters To Update\n");
             PQclear(resL);
             return 0;
         }
@@ -160,13 +156,11 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         if (PQresultStatus(result) != PGRES_COMMAND_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(result);
-            bad_exit(conn);
             return -1;
         }
         if (PQresultStatus(result1) != PGRES_COMMAND_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(result1);
-            bad_exit(conn);
             return -1;
         }
 
@@ -194,18 +188,15 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         PGresult *resL = PQexec(conn, requestTrueL);
         PGresult *resW = PQexec(conn, requestTrueW);
         
-        // If there's an error, exit with bad_exit
         if (PQresultStatus(resL) != PGRES_TUPLES_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(resL);
-            bad_exit(conn);
             return -1;
         }
-        // If there's an error, exit with bad_exit
+
         if (PQresultStatus(resW) != PGRES_TUPLES_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(resW);
-            bad_exit(conn);
             return -1;
         }
         // If no rows were returned, return with -1
@@ -213,12 +204,12 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         int numW = PQntuples(resW);
 
         if (numL == 0 && numW == 0) { 
-            printf("No Characters To Update\n");
+            // printf("No Characters To Update\n");
             PQclear(resL);
             return 0;
         }
 
-        printf("Found %d Losing and %d Winning Characters\n", numL, numW);
+        // printf("Found %d Losing and %d Winning Characters\n", numL, numW);
 
         char updateWinning[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = FALSE WHERE (memberID, role) IN (";
         char updateLosing[MAXSQLSTATEMENTSTRINGSIZE] = "UPDATE Characters SET wasDefeated = TRUE WHERE (memberID, role) IN (";
@@ -238,13 +229,11 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         if (PQresultStatus(result) != PGRES_COMMAND_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(result);
-            bad_exit(conn);
             return -1;
         }
         if (PQresultStatus(result1) != PGRES_COMMAND_OK) {
             printf(PQerrorMessage(conn));      
             PQclear(result1);
-            bad_exit(conn);
             return -1;
         }
 
@@ -270,7 +259,27 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 
 int increaseSomeThingCosts(PGconn *conn, int maxTotalIncrease)
 {
-    
+    char callToFunc[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT increaseSomeThingCostsFunction(";
+    char maxTotalIncreaseStr[100];
+    sprintf(maxTotalIncreaseStr, "%d", maxTotalIncrease);
+    strcat(callToFunc, maxTotalIncreaseStr);
+    strcat(callToFunc, ")");
+
+    PGresult *result = PQexec(conn, callToFunc);
+
+    // If there's an error, exit with bad_exit
+    if (PQresultStatus(result) != PGRES_TUPLES_OK) {
+        printf(PQerrorMessage(conn));      
+        PQclear(result);
+        return -1;
+    }
+
+    int totalIncreased = atoi(PQgetvalue(result, 0, 0));
+
+    PQclear(result);
+
+    return totalIncreased;
+
 }
 
 int main(int argc, char **argv)
@@ -302,15 +311,70 @@ int main(int argc, char **argv)
                 PQerrorMessage(conn));
         bad_exit(conn);
     }
-
-    int result;
     
     /* Perform the calls to printNumberOfThingsInRoom listed in Section 6 of Lab4,
      * printing error message if there's an error.
      */
     printf("\n");
-    printNumberOfThingsInRoom(conn, 11);
-    printNumberOfThingsInRoom(conn, 1);
+
+    int roomID;
+    int result;
+
+    roomID = 1;
+    result = printNumberOfThingsInRoom(conn, roomID);
+    switch(result) {
+        case 0:
+            break;
+        case -1:
+            printf("No room exists whose id is %d\n", roomID);
+            break;
+        default:
+            printf("Unknown Error (printNumberOfThingsInRoom with roomID %d)\n", roomID);
+            bad_exit(conn);
+            break;
+    }
+    
+    roomID = 2;
+    result = printNumberOfThingsInRoom(conn, roomID);
+    switch(result) {
+        case 0:
+            break;
+        case -1:
+            printf("No room exists whose id is %d\n", roomID);
+            break;
+        default:
+            printf("Unknown Error (printNumberOfThingsInRoom with roomID %d)\n", roomID);
+            bad_exit(conn);
+            break;
+    }
+    
+    roomID = 3;
+    result = printNumberOfThingsInRoom(conn, roomID);
+    switch(result) {
+        case 0:
+            break;
+        case -1:
+            printf("No room exists whose id is %d\n", roomID);
+            break;
+        default:
+            printf("Unknown Error (printNumberOfThingsInRoom with roomID %d)\n", roomID);
+            bad_exit(conn);
+            break;
+    }
+    
+    roomID = 7;
+    result = printNumberOfThingsInRoom(conn, roomID);
+    switch(result) {
+        case 0:
+            break;
+        case -1:
+            printf("No room exists whose id is %d\n", roomID);
+            break;
+        default:
+            printf("Unknown Error (printNumberOfThingsInRoom with roomID %d)\n", roomID);
+            bad_exit(conn);
+            break;
+    }
     
     /* Extra newline for readability */
     printf("\n");
@@ -320,8 +384,57 @@ int main(int argc, char **argv)
      * and print messages as described.
      */
     // printf("Updated %d Monsters\n", updateWasDefeated(conn, "M"));
-    printf("Updated %d Character\n", updateWasDefeated(conn, "C"));
-    updateWasDefeated(conn, "D");
+
+    int result2;
+    char *letter;
+
+    letter = "C";
+    result2 = updateWasDefeated(conn, letter);
+    if(result2 >= 0){
+        printf("%d wasDefeated values were fixed for %s\n", result2, letter);
+    }else if (result2 == -1){
+        printf("Illegal value for doCharactersOrMonsters %s\n", letter);
+    }else {
+        printf("Bad return value %d (updateWasDefeated with input %s)\n", result2, letter);
+        bad_exit(conn);
+    }
+    
+    // switch(result2 > 0) {
+    //     case 1:
+    //         printf("%d wasDefeated values were fixed for %s\n", result2, letter);
+    //         break;
+    //     case 0:
+    //     switch(result2 < 0):
+    //         case -1:
+    //             printf("Illegal value for doCharactersOrMonsters %s\n", letter);
+    //             break;
+    //     default:
+    //         printf("Bad return value %d (updateWasDefeated with input %s)\n", result2, letter);
+    //         bad_exit(conn);
+    //         break;
+    // }
+
+    letter = "M";
+    result2 = updateWasDefeated(conn, letter);
+    if(result2 >= 0){
+        printf("%d wasDefeated values were fixed for %s\n", result2, letter);
+    }else if (result2 == -1){
+        printf("Illegal value for doCharactersOrMonsters %s\n", letter);
+    }else {
+        printf("Bad return value %d (updateWasDefeated with input %s)\n", result2, letter);
+        bad_exit(conn);
+    }
+
+    letter = "C";
+    result2 = updateWasDefeated(conn, letter);
+    if(result2 >= 0){
+        printf("%d wasDefeated values were fixed for %s\n", result2, letter);
+    }else if (result2 == -1){
+        printf("Illegal value for doCharactersOrMonsters %s\n", letter);
+    }else {
+        printf("Bad return value %d (updateWasDefeated with input %s)\n", result2, letter);
+        bad_exit(conn);
+    }
     
     /* Extra newline for readability */
     printf("\n");
@@ -330,6 +443,45 @@ int main(int argc, char **argv)
     /* Perform the calls to increaseSomeThingCosts listed in Section 6 of Lab4,
      * and print messages as described.
      */
+    int maxTotalIncrease;
+    int result3;
+
+    maxTotalIncrease = 12;
+    result3 = increaseSomeThingCosts(conn, maxTotalIncrease);
+    if(result3 >= 0){
+        printf("Total increase for maxTotalIncrease %d is %d\n", maxTotalIncrease, result3);
+    }else {
+        printf("Bad return value %d (increaseSomeThingCosts with input %s)\n", result3, maxTotalIncrease);
+        bad_exit(conn);
+    }
+
+    maxTotalIncrease = 500;
+    result3 = increaseSomeThingCosts(conn, maxTotalIncrease);
+    if(result3 >= 0){
+        printf("Total increase for maxTotalIncrease %d is %d\n", maxTotalIncrease, result3);
+    }else {
+        printf("Bad return value %d (increaseSomeThingCosts with input %s)\n", result3, maxTotalIncrease);
+        bad_exit(conn);
+    }
+
+    maxTotalIncrease = 39;
+    result3 = increaseSomeThingCosts(conn, maxTotalIncrease);
+    if(result3 >= 0){
+        printf("Total increase for maxTotalIncrease %d is %d\n", maxTotalIncrease, result3);
+    }else {
+        printf("Bad return value %d (increaseSomeThingCosts with input %s)\n", result3, maxTotalIncrease);
+        bad_exit(conn);
+    }
+
+    maxTotalIncrease = 1;
+    result3 = increaseSomeThingCosts(conn, maxTotalIncrease);
+    if(result3 >= 0){
+        printf("Total increase for maxTotalIncrease %d is %d\n", maxTotalIncrease, result3);
+    }else {
+        printf("Bad return value %d (increaseSomeThingCosts with input %s)\n", result3, maxTotalIncrease);
+        bad_exit(conn);
+    }
+
 
     good_exit(conn);
     return 0;

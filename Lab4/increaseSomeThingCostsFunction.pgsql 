@@ -44,14 +44,14 @@ BEGIN
             ELSE costToIncrease := 0;
             END IF;
 
-            numOfThings := currIncrease / costToIncrease;
+            numOfThings := FLOOR(currIncrease / costToIncrease);
             IF numOfThings > theCount THEN numOfThings := theCount;
             ELSE numOfThings = numOfThings;
             END IF;
 
             currIncrease := currIncrease - (numOfThings * costToIncrease);
 
-            RAISE NOTICE 'theCount is %, numOfThings is %, increased %, currIncrease is %', theCount, numOfThings, (numOfThings * costToIncrease), currIncrease;
+            /* RAISE NOTICE 'theCount is %, numOfThings is %, increased %, currIncrease is %', theCount, numOfThings, (numOfThings * costToIncrease), currIncrease; */
 
             UPDATE Things
             SET cost = cost + costToIncrease
@@ -64,7 +64,7 @@ BEGIN
                  LIMIT numOfThings);
 
             costIncreased = costIncreased + (costToIncrease * numOfThings);
-            RAISE NOTICE 'Cost increased is %', costIncreased;
+            /* RAISE NOTICE 'Cost increased is %', costIncreased; */
 
         END LOOP;
         CLOSE increaseCursor;
