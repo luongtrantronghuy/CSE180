@@ -83,7 +83,7 @@ int printNumberOfThingsInRoom(PGconn *conn, int theRoomID)
     // Get values from the return row (should only be one)
     char *desc = PQgetvalue(res, 0, 0);
     char *count = PQgetvalue(res, 0, 1);
-    // printf("Room %s, %s, has %s in it.\n", theRoomIDstr, desc, count);
+    printf("Room %s, %s, has %s in it.\n", theRoomIDstr, desc, count);
     
     PQclear(res);
     return 0;
@@ -241,7 +241,7 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
         PQclear(result1);
         return numW + numL;
     }else{
-        printf("Not M or C\n");
+        // printf("Not M or C\n");
         return -1;
     }
 
