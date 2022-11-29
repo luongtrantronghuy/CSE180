@@ -259,6 +259,7 @@ int updateWasDefeated(PGconn *conn, char *doCharactersOrMonsters)
 
 int increaseSomeThingCosts(PGconn *conn, int maxTotalIncrease)
 {
+    // Build sql statement to call function
     char callToFunc[MAXSQLSTATEMENTSTRINGSIZE] = "SELECT increaseSomeThingCostsFunction(";
     char maxTotalIncreaseStr[100];
     sprintf(maxTotalIncreaseStr, "%d", maxTotalIncrease);
